@@ -1,17 +1,21 @@
+/*  Antony Adamovich, Dimitra Deliopoulos, Mahmoud Gudarzi
+    serial.cpp for XSEDE hw2 "Particle Simulator" Serial version
+    West Chester University - CSC 496 - Dr. Lihn B. Ngo
+    Created: 4-MAR-2020 
+*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
 #include "common.h"
 
-//
-//  benchmarking program
-//
 int main( int argc, char **argv )
 {    
     int navg,nabsavg=0;
     double davg,dmin, absmin=1.0, absavg=0.0;
 
+    // Command line option finding
     if( find_option( argc, argv, "-h" ) >= 0 )
     {
         printf( "Options:\n" );
@@ -31,23 +35,22 @@ int main( int argc, char **argv )
     FILE *fsave = savename ? fopen( savename, "w" ) : NULL;
     FILE *fsum = sumname ? fopen ( sumname, "a" ) : NULL;
 
+    // Particle Initialization
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
     set_size( n );
     init_particles( n, particles );
     
-    //
-    //  simulate a number of time steps
-    //
+    // Time when simulation begins
     double simulation_time = read_timer( );
 	
+    // How long the simulation is to run is based on NSTEPS
     for( int step = 0; step < NSTEPS; step++ )
     {
-	navg = 0;
+        navg = 0;
         davg = 0.0;
-	dmin = 1.0;
-        //
-        //  compute forces
-        //
+        dmin = 1.0;
+        
+        // Application of near-particle forces (acceleration)
         for( int i = 0; i < n; i++ )
         {
             particles[i].ax = particles[i].ay = 0;
@@ -55,63 +58,54 @@ int main( int argc, char **argv )
 				apply_force( particles[i], particles[j],&dmin,&davg,&navg);
         }
  
-        //
-        //  move particles
-        //
+        // Move each particle
         for( int i = 0; i < n; i++ ) 
             move( particles[i] );		
 
         if( find_option( argc, argv, "-no" ) == -1 )
         {
-          //
-          // Computing statistical data
-          //
-          if (navg) {
-            absavg +=  davg/navg;
-            nabsavg++;
-          }
-          if (dmin < absmin) absmin = dmin;
-		
-          //
-          //  save if necessary
-          //
-          if( fsave && (step%SAVEFREQ) == 0 )
-              save( fsave, n, particles );
+            if (navg) {
+                absavg +=  davg/navg;
+                nabsavg++;
+            }
+            if (dmin < absmin) 
+                absmin = dmin;
+            // Prints particle positions to a file based on SAVEFREQ
+            if( fsave && (step % SAVEFREQ) == 0 )
+                save( fsave, n, particles );
         }
     }
+    // Simulation concluded, record running time and print
     simulation_time = read_timer( ) - simulation_time;
-    
     printf( "n = %d, simulation time = %g seconds", n, simulation_time);
 
+    // If -no flag is not set, simulation correctness will be checked
     if( find_option( argc, argv, "-no" ) == -1 )
     {
-      if (nabsavg) absavg /= nabsavg;
-    // 
-    //  -the minimum distance absmin between 2 particles during the run of the simulation
-    //  -A Correct simulation will have particles stay at greater than 0.4 (of cutoff) with typical values between .7-.8
-    //  -A simulation were particles don't interact correctly will be less than 0.4 (of cutoff) with typical values between .01-.05
-    //
-    //  -The average distance absavg is ~.95 when most particles are interacting correctly and ~.66 when no particles are interacting
-    //
-    printf( ", absmin = %lf, absavg = %lf", absmin, absavg);
-    if (absmin < 0.4) printf ("\nThe minimum distance is below 0.4 meaning that some particle is not interacting");
-    if (absavg < 0.8) printf ("\nThe average distance is below 0.8 meaning that most particles are not interacting");
+        if (nabsavg) 
+            absavg /= nabsavg;
+        // Correctness check for simulation:
+        //  - The minimum distance absmin between 2 particles during the run of the simulation
+        //  - A Correct simulation will have particles stay at greater than 0.4 (of cutoff) with typical values between .7-.8
+        //  - A simulation were particles don't interact correctly will be less than 0.4 (of cutoff) with typical values between .01-.05
+        //  - The average distance absavg is ~.95 when most particles are interacting correctly and ~.66 when no particles are interacting
+        printf( ", absmin = %lf, absavg = %lf", absmin, absavg);
+        if (absmin < 0.4)
+            printf ("\nThe minimum distance is below 0.4 meaning that some particle is not interacting");
+        if (absavg < 0.8)
+            printf ("\nThe average distance is below 0.8 meaning that most particles are not interacting");
     }
     printf("\n");     
 
-    //
-    // Printing summary data
-    //
-    if( fsum) 
+    // Print Summary Time
+    if(fsum) 
         fprintf(fsum,"%d %g\n",n,simulation_time);
  
-    //
-    // Clearing space
-    //
-    if( fsum )
+    // Cleanup / Memory Management
+    if(fsum)
         fclose( fsum );    
     free( particles );
-    if( fsave )
+    if(fsave)
         fclose( fsave );
     
     return 0;
