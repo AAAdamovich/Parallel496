@@ -99,6 +99,7 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
     double dx = neighbor.x - particle.x;
     double dy = neighbor.y - particle.y;
     double r2 = dx * dx + dy * dy;
+    
     if( r2 > CUTOFF*CUTOFF )
         return;
 	if (r2 != 0)
@@ -120,6 +121,8 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
     double coef = ( 1 - CUTOFF / r ) / r2 / mass;
     particle.ax += coef * dx;
     particle.ay += coef * dy;
+    //printf("r2 was: %lf\n", r2);
+    //printf("ACCEL CHANGED AT: X: %lf Y: %lf\n", particle.x, particle.y);
 }
 
 //

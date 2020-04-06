@@ -26,13 +26,13 @@ int get_square(particle_t &particle, int divisions, double subsize){
     int ycoordinate = (int)(particle.y / subsize);
     int location = ycoordinate + (divisions * xcoordinate);
     // Opportunity for optimization for near-wall cases
-    if(particle.x <= (subsize * (double)xcoordinate) + BOUND){
+    if(particle.x <= (subsize * (double)xcoordinate) + CUTOFF){
         // Particle is in bin NW, N or NE
-        if(particle.y <= (subsize * (double)ycoordinate) + BOUND){
+        if(particle.y <= (subsize * (double)ycoordinate) + CUTOFF){
             // In bin NW
             return (location * NUM_BINS) + NW;
         }
-        if(particle.y >= (subsize * (double)(ycoordinate + 1)) - BOUND){
+        if(particle.y >= (subsize * (double)(ycoordinate + 1)) - CUTOFF){
             // In bin NE
             return (location * NUM_BINS) + NE;
         }
@@ -40,13 +40,13 @@ int get_square(particle_t &particle, int divisions, double subsize){
         return (location * NUM_BINS) + N;
     }
     // Particle is in bin W, C, E, SW, S, or SE
-    if(particle.x >= (subsize * (double)(xcoordinate + 1)) - BOUND){
+    if(particle.x >= (subsize * (double)(xcoordinate + 1)) - CUTOFF){
         // Particle is in bin SW, S, or SE
-        if(particle.y <= (subsize * (double)ycoordinate) + BOUND){
+        if(particle.y <= (subsize * (double)ycoordinate) + CUTOFF){
             // In bin SW
             return (location * NUM_BINS) + SW;
         }
-        if(particle.y >= (subsize * (double)(ycoordinate + 1)) - BOUND){
+        if(particle.y >= (subsize * (double)(ycoordinate + 1)) - CUTOFF){
             // In bin SE
             return (location * NUM_BINS) + SE;
         }
@@ -54,11 +54,11 @@ int get_square(particle_t &particle, int divisions, double subsize){
         return (location * NUM_BINS) + S;
     }
     // Particle is in bin W, C, or E
-    if(particle.y <= (subsize * (double)ycoordinate) + BOUND){
+    if(particle.y <= (subsize * (double)ycoordinate) + CUTOFF){
         // In bin W
         return (location * NUM_BINS) + W;
     }
-    if(particle.y >= (subsize * (double)(ycoordinate + 1)) - BOUND){
+    if(particle.y >= (subsize * (double)(ycoordinate + 1)) - CUTOFF){
         // In bin E
         return (location * NUM_BINS) + E;
     }
@@ -71,7 +71,7 @@ int main( int argc, char **argv )
 {    
     
     // !! Testing Value !! Must be altered dynamically, NOT YET IMPLEMENTED
-    int divisions = 3;
+    int divisions = 5;
     // Corresponding to a MxM matrix where divisions = M
     
     /* ==== BIN SETUP ====
@@ -132,22 +132,31 @@ int main( int argc, char **argv )
     subsize = size / ((double)divisions);
     init_particles( n, particles );
     
-    // "Sort" particles into master field array
-    for(int i = 0; i < n; i++){
-        field[get_square(particles[i], divisions, subsize)].push_back(particles[i]);
-    }
-
-    for(int i = 0; i < field.size(); i++){
-        for(int j = 0; j < field[i].size(); j++){
-            printf("i: %d  j:  %d  X: %lf  Y: %lf\n", i, j, field[i][j].x, field[i][j].y);
-        }
-    }
+    
+    
 
 
 
     // Time when simulation begins
     double simulation_time = read_timer( );
-	
+    
+	// "Sort" particles into master field array
+    for(int i = 0; i < n; i++){
+        field[get_square(particles[i], divisions, subsize)].push_back(particles[i]);
+    }
+    
+    // DEBUGGING PRINTS
+    /*
+      printf("subsize: %lf  subsize*2: %lf\n", subsize, subsize * 2.0);
+      for(int i = 0; i < field.size(); i++){
+          if(field[i].size() == 0){
+             printf("i: %d  EMPTY\n", i);
+          }
+          for(int j = 0; j < field[i].size(); j++){
+              printf("i: %d  j:  %d  X: %lf  Y: %lf\n", i, j, field[i][j].x, field[i][j].y);
+          }
+       }
+    */
     // How long the simulation is to run is based on NSTEPS
     for( int step = 0; step < NSTEPS; step++ )
     {
@@ -155,18 +164,66 @@ int main( int argc, char **argv )
         davg = 0.0;
         dmin = 1.0;
         
-        // Application of near-particle forces (acceleration)
-        for( int i = 0; i < n; i++ )
-        {
+        // === PARTICLE INTERACTIONS WITHIN SAME CELL ===
+        
+        // Go by cells, cell % NUM_BINS would be its "location" in the grid
+        for(int cell = 0; cell < field.size(); cell += NUM_BINS){
+            // Go by the bins within cells
+            for(int bin = cell; bin < cell + NUM_BINS; bin++){
+                // Now we start looking at particles within cells
+                for(int i = 0; i < field[bin].size(); i++){
+                    // Reset acceleration values in prep for calculation
+                    (field[bin][i]).ax = 0;
+                    (field[bin][i]).ay = 0;
+                    // Particle interactions within the same bin
+                    for(int j = 0; j < i; j++){
+                        apply_force( field[bin][i], field[bin][j],&dmin,&davg,&navg);
+                    }
+                    //printf("cell: %d  bin:  %d  i: %d  XAccel: %lf\n", cell, bin, i, (field[bin][i]).ax);
+                    // Particle interactions within the same cell, different bins
+                    for(int localbin = bin + 1; localbin < cell + NUM_BINS; localbin++){
+                        for(int j = 0; j < field[localbin].size(); j++){
+                            apply_force( field[bin][i], field[localbin][j],&dmin,&davg,&navg);
+                        }
+                    }
+                    //printf("cell: %d  bin:  %d  i: %d  XAccel: %lf\n", cell, bin, i, (field[bin][i]).ax);
+                }
+            }
+        }
+        
+        // TODO === PARTICLE INTERACTIONS ALONG CELL BORDERS ===
+        
+        
+        
+        
+        
+        // Starter Code
+    /*    
+          for( int i = 0; i < n; i++ )
+          {
             particles[i].ax = particles[i].ay = 0;
-            for (int j = 0; j < n; j++ )
-				apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+              for (int j = 0; j < n; j++ ){
+				  apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+                }
+          }
+    */   
+
+        // Particle movement alt.
+        for(int i = 0; i < field.size(); i++){
+            for(int j = 0; j < field[i].size(); j++){
+                //printf("AccelX: %lf  AccelY: %lf\n", field[i][j].ax, field[i][j].ay);
+                move(field[i][j]);
+            }
         }
  
+ /*
         // Move each particle
-        for( int i = 0; i < n; i++ ) 
-            move( particles[i] );		
-
+         for( int i = 0; i < n; i++ ){
+             
+             move( particles[i] );
+         } 
+            		
+*/
         if( find_option( argc, argv, "-no" ) == -1 )
         {
             if (navg) {
@@ -180,7 +237,9 @@ int main( int argc, char **argv )
                 save( fsave, n, particles );
         }
     }
+    
     // Simulation concluded, record running time and print
+    
     simulation_time = read_timer( ) - simulation_time;
     printf( "n = %d, simulation time = %g seconds", n, simulation_time);
 
