@@ -1,7 +1,7 @@
 /*  Antony Adamovich, Dimitra Deliopoulos, Mahmoud Gudarzi
 *    common.h for XSEDE hw2 "Particle Simulator" - Serial version
 *    West Chester University - CSC 496 - Dr. Lihn B. Ngo
-*    Created: 04-MAR-2020 - Last Edited: 05-APR-2020 by Antony Adamovich
+*    Created: 04-MAR-2020 - Last Edited: 06-APR-2020 by Antony Adamovich
 *    Please see https://github.com/AAAdamovich/Parallel496
 *       for version tracking
 *    Definitions
@@ -22,8 +22,6 @@ inline int max( int a, int b ) { return a > b ? a : b; }
 const int NSTEPS = 1000;
 const int SAVEFREQ = 10;
 const double CUTOFF = 0.01;
-// The max distance between a particle frontier and a cell wall
-const double BOUND = CUTOFF * CUTOFF;
 
 //
 // particle data structure

@@ -1,10 +1,10 @@
 /*  Antony Adamovich, Dimitra Deliopoulos, Mahmoud Gudarzi
 *    serial.cpp for XSEDE hw2 "Particle Simulator" - Serial version
 *    West Chester University - CSC 496 - Dr. Lihn B. Ngo
-*    Created: 04-MAR-2020 - Last Edited: 05-APR-2020 by Antony Adamovich
+*    Created: 04-MAR-2020 - Last Edited: 06-APR-2020 by Antony Adamovich
 *    Please see https://github.com/AAAdamovich/Parallel496
 *       for version tracking
-*    Definitions\
+*    Definitions:
 *       Field: The entire square area where particles will be interacting, 
         the total simulation area
 *       Cell: A subdivision of the simulation area, as a square
@@ -71,7 +71,7 @@ int main( int argc, char **argv )
 {    
     
     // !! Testing Value !! Must be altered dynamically, NOT YET IMPLEMENTED
-    int divisions = 5;
+    int divisions = 9;
     // Corresponding to a MxM matrix where divisions = M
     
     /* ==== BIN SETUP ====
@@ -209,10 +209,20 @@ int main( int argc, char **argv )
     */   
 
         // Particle movement alt.
+        int my_index;
         for(int i = 0; i < field.size(); i++){
             for(int j = 0; j < field[i].size(); j++){
                 //printf("AccelX: %lf  AccelY: %lf\n", field[i][j].ax, field[i][j].ay);
                 move(field[i][j]);
+                my_index = get_square(field[i][j], divisions, subsize);
+                if(my_index != i){
+                    // Particle has moved outside of its bin into another one, must be updated
+                    //printf("WHERE DID MY LOST LAMB GO?! i: %d myindex: %d\n", i, my_index);
+                    // Add particle to its new home
+                    field[my_index].push_back(field[i][j]);
+                    // Remove duplicate particle from old location
+                    (field[i]).erase(field[i].begin() + j);
+                }
             }
         }
  
