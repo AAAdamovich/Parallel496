@@ -19,8 +19,8 @@ inline int max( int a, int b ) { return a > b ? a : b; }
 //
 //  saving parameters
 //
-const int NSTEPS = 1000;
-const int SAVEFREQ = 10;
+const int NSTEPS = 2;
+const int SAVEFREQ = 1;
 const double CUTOFF = 0.01;
 // The max distance between a particle frontier and a cell wall
 const double BOUND = CUTOFF * CUTOFF;

@@ -4,7 +4,9 @@
 *    Created: 04-MAR-2020 - Last Edited: 05-APR-2020 by Antony Adamovich
 *    Please see https://github.com/AAAdamovich/Parallel496
 *       for version tracking
-*    Definitions
+*    Definitions\
+*       Field: The entire square area where particles will be interacting, 
+        the total simulation area
 *       Cell: A subdivision of the simulation area, as a square
 *       Frontier: An area close a cell's border where particles from 
 *       two neighboring cells could potentially interact
@@ -17,11 +19,83 @@
 #include <vector>
 #include "common.h"
 
+enum bins {C, N, NE, E, SE, S, SW, W, NW, NUM_BINS};
+
+int get_square(particle_t &particle, int divisions, double subsize){
+    int xcoordinate = (int)(particle.x / subsize);
+    int ycoordinate = (int)(particle.y / subsize);
+    int location = ycoordinate + (divisions * xcoordinate);
+    // Opportunity for optimization for near-wall cases
+    if(particle.x <= (subsize * (double)xcoordinate) + BOUND){
+        // Particle is in bin NW, N or NE
+        if(particle.y <= (subsize * (double)ycoordinate) + BOUND){
+            // In bin NW
+            return (location * NUM_BINS) + NW;
+        }
+        if(particle.y >= (subsize * (double)(ycoordinate + 1)) - BOUND){
+            // In bin NE
+            return (location * NUM_BINS) + NE;
+        }
+        // Otherwise, particle in bin N
+        return (location * NUM_BINS) + N;
+    }
+    // Particle is in bin W, C, E, SW, S, or SE
+    if(particle.x >= (subsize * (double)(xcoordinate + 1)) - BOUND){
+        // Particle is in bin SW, S, or SE
+        if(particle.y <= (subsize * (double)ycoordinate) + BOUND){
+            // In bin SW
+            return (location * NUM_BINS) + SW;
+        }
+        if(particle.y >= (subsize * (double)(ycoordinate + 1)) - BOUND){
+            // In bin SE
+            return (location * NUM_BINS) + SE;
+        }
+        // Otherwise, particle in bin S
+        return (location * NUM_BINS) + S;
+    }
+    // Particle is in bin W, C, or E
+    if(particle.y <= (subsize * (double)ycoordinate) + BOUND){
+        // In bin W
+        return (location * NUM_BINS) + W;
+    }
+    if(particle.y >= (subsize * (double)(ycoordinate + 1)) - BOUND){
+        // In bin E
+        return (location * NUM_BINS) + E;
+    }
+    // Options exhausted, particle in bin C
+    return (location * NUM_BINS) + C;
+}
+
+
 int main( int argc, char **argv )
 {    
+    
     // !! Testing Value !! Must be altered dynamically, NOT YET IMPLEMENTED
     int divisions = 3;
-    // Corresponding to a MxM matrix where SIZE_DIV = M
+    // Corresponding to a MxM matrix where divisions = M
+    
+    /* ==== BIN SETUP ====
+    *  
+    *  NW - 8  |  N - 1  |  NE - 2
+    * ---------|---------|---------
+    *   W - 7  |  C - 0  |  E - 3
+    * ---------|---------|---------
+    *  SW - 6  |  S - 5  |  SE - 4
+    *
+    * Hence, NINE (9) is the total number of bins as NUM_BINS = 9
+    */
+    
+   //   std::vector<std::vector[]> field (divisions * divisions, std::vector[]);
+    // for(int i = 0; i < (int)field.size(); i++){
+        // field[i] = vector[NUM_BINS];
+        // for(int j = 0; j < NUM_BINS; j++){
+            // field[i][j] = 
+        // }
+     // }
+    // future change to vector<list<particle>>
+    
+    // 2D master field array that contains all particles
+    std::vector< std::vector<particle_t> > field (divisions * divisions * NUM_BINS, std::vector<particle_t>());
 
     int navg,nabsavg=0;
     double davg,dmin, absmin=1.0, absavg=0.0;
@@ -58,6 +132,19 @@ int main( int argc, char **argv )
     subsize = size / ((double)divisions);
     init_particles( n, particles );
     
+    // "Sort" particles into master field array
+    for(int i = 0; i < n; i++){
+        field[get_square(particles[i], divisions, subsize)].push_back(particles[i]);
+    }
+
+    for(int i = 0; i < field.size(); i++){
+        for(int j = 0; j < field[i].size(); j++){
+            printf("i: %d  j:  %d  X: %lf  Y: %lf\n", i, j, field[i][j].x, field[i][j].y);
+        }
+    }
+
+
+
     // Time when simulation begins
     double simulation_time = read_timer( );
 	
