@@ -1,3 +1,11 @@
+/*  Antony Adamovich, Dimitra Deliopoulos, Mahmoud Gudarzi
+*    common.cpp for XSEDE hw2 "Particle Simulator" - Serial version
+*    West Chester University - CSC 496 - Dr. Lihn B. Ngo
+*    Created: 04-MAR-2020 - Last Edited: 29-MAR-2020 by Antony Adamovich
+*    Please see https://github.com/AAAdamovich/Parallel496
+*       for version tracking
+*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -15,8 +23,7 @@ double size;
 //
 #define density 0.0005
 #define mass    0.01
-#define cutoff  0.01
-#define min_r   (cutoff/100)
+#define min_r   (CUTOFF/100)
 #define dt      0.0005
 
 //
@@ -39,9 +46,10 @@ double read_timer( )
 //
 //  keep density constant
 //
-void set_size( int n )
+double set_size( int n )
 {
     size = sqrt( density * n );
+    return size;
 }
 
 //
@@ -91,13 +99,13 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
     double dx = neighbor.x - particle.x;
     double dy = neighbor.y - particle.y;
     double r2 = dx * dx + dy * dy;
-    if( r2 > cutoff*cutoff )
+    if( r2 > CUTOFF*CUTOFF )
         return;
 	if (r2 != 0)
         {
-	   if (r2/(cutoff*cutoff) < *dmin * (*dmin))
-	      *dmin = sqrt(r2)/cutoff;
-           (*davg) += sqrt(r2)/cutoff;
+	   if (r2/(CUTOFF*CUTOFF) < *dmin * (*dmin))
+	      *dmin = sqrt(r2)/CUTOFF;
+           (*davg) += sqrt(r2)/CUTOFF;
            (*navg) ++;
         }
 		
@@ -109,7 +117,7 @@ void apply_force( particle_t &particle, particle_t &neighbor , double *dmin, dou
     //
     //  very simple short-range repulsive force
     //
-    double coef = ( 1 - cutoff / r ) / r2 / mass;
+    double coef = ( 1 - CUTOFF / r ) / r2 / mass;
     particle.ax += coef * dx;
     particle.ay += coef * dy;
 }

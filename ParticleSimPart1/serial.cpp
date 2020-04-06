@@ -1,19 +1,35 @@
 /*  Antony Adamovich, Dimitra Deliopoulos, Mahmoud Gudarzi
-    serial.cpp for XSEDE hw2 "Particle Simulator" Serial version
-    West Chester University - CSC 496 - Dr. Lihn B. Ngo
-    Created: 4-MAR-2020 
+*    serial.cpp for XSEDE hw2 "Particle Simulator" - Serial version
+*    West Chester University - CSC 496 - Dr. Lihn B. Ngo
+*    Created: 04-MAR-2020 - Last Edited: 05-APR-2020 by Antony Adamovich
+*    Please see https://github.com/AAAdamovich/Parallel496
+*       for version tracking
+*    Definitions
+*       Cell: A subdivision of the simulation area, as a square
+*       Frontier: An area close a cell's border where particles from 
+*       two neighboring cells could potentially interact
 */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <vector>
 #include "common.h"
 
 int main( int argc, char **argv )
 {    
+    // !! Testing Value !! Must be altered dynamically, NOT YET IMPLEMENTED
+    int divisions = 3;
+    // Corresponding to a MxM matrix where SIZE_DIV = M
+
     int navg,nabsavg=0;
     double davg,dmin, absmin=1.0, absavg=0.0;
+    // The length of the square that defines the area in which the particles will be moving around in
+    // Duplicate value from "common.cpp"
+    double size;
+    // The length of the squares that correspond to cells in the matrix subdivision of the simulation area
+    double subsize;
 
     // Command line option finding
     if( find_option( argc, argv, "-h" ) >= 0 )
@@ -37,7 +53,9 @@ int main( int argc, char **argv )
 
     // Particle Initialization
     particle_t *particles = (particle_t*) malloc( n * sizeof(particle_t) );
-    set_size( n );
+    // Obtain size information from common
+    size = set_size( n );
+    subsize = size / ((double)divisions);
     init_particles( n, particles );
     
     // Time when simulation begins
