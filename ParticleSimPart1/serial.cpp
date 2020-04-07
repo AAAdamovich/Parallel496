@@ -22,8 +22,11 @@
 enum bins {C, N, NE, E, SE, S, SW, W, NW, NUM_BINS};
 
 int get_square(particle_t &particle, int divisions, double subsize){
+    // Turning (x, y) positions into integer matrix values (xcoordinate, ycoordinate)
     int xcoordinate = (int)(particle.x / subsize);
     int ycoordinate = (int)(particle.y / subsize);
+    // This matrix position is then transformed into an bin index for field
+    // which must later be multiplied to reach the actual index
     int location = ycoordinate + (divisions * xcoordinate);
     // Opportunity for optimization for near-wall cases
     if(particle.x <= (subsize * (double)xcoordinate) + CUTOFF){
@@ -70,8 +73,7 @@ int get_square(particle_t &particle, int divisions, double subsize){
 int main( int argc, char **argv )
 {    
     
-    // !! Testing Value !! Must be altered dynamically, NOT YET IMPLEMENTED
-    int divisions = 15;
+    int divisions;
     // Corresponding to a MxM matrix where divisions = M
     
     /* ==== BIN SETUP ====
@@ -85,8 +87,6 @@ int main( int argc, char **argv )
     * Hence, NINE (9) is the total number of bins as NUM_BINS = 9
     */
     
-
-
     int navg,nabsavg=0;
     double davg,dmin, absmin=1.0, absavg=0.0;
     // The length of the square that defines the area in which the particles will be moving around in
@@ -125,7 +125,6 @@ int main( int argc, char **argv )
     subsize = size / ((double)divisions);
     init_particles( n, particles );
     
-
     // 2D master field array that contains all particles
     std::vector< std::vector<particle_t> > field (divisions * divisions * NUM_BINS, std::vector<particle_t>());
 
@@ -136,19 +135,6 @@ int main( int argc, char **argv )
     for(int i = 0; i < n; i++){
         field[get_square(particles[i], divisions, subsize)].push_back(particles[i]);
     }
-    
-    // DEBUGGING PRINTS
-    /*
-      printf("subsize: %lf  subsize*2: %lf\n", subsize, subsize * 2.0);
-      for(int i = 0; i < field.size(); i++){
-          if(field[i].size() == 0){
-             printf("i: %d  EMPTY\n", i);
-          }
-          for(int j = 0; j < field[i].size(); j++){
-              printf("i: %d  j:  %d  X: %lf  Y: %lf\n", i, j, field[i][j].x, field[i][j].y);
-          }
-       }
-    */
     // How long the simulation is to run is based on NSTEPS
     for( int step = 0; step < NSTEPS; step++ )
     {
@@ -172,7 +158,6 @@ int main( int argc, char **argv )
                     for(int j = 0; j < i; j++){
                         apply_force( field[bin][i], field[bin][j],&dmin,&davg,&navg);
                     }
-                    //printf("cell: %d  bin:  %d  i: %d  XAccel: %lf\n", cell, bin, i, (field[bin][i]).ax);
                     
                     // Particle interactions within the same cell, different bins
                     for(int localbin = bin + 1; localbin < cell + NUM_BINS; localbin++){
@@ -180,12 +165,11 @@ int main( int argc, char **argv )
                             apply_force( field[bin][i], field[localbin][j],&dmin,&davg,&navg);
                         }
                     }
-                    //printf("cell: %d  bin:  %d  i: %d  XAccel: %lf\n", cell, bin, i, (field[bin][i]).ax);
                 }
             }
         }
         
-        // TODO === PARTICLE INTERACTIONS ALONG CELL BORDERS ===
+        // === PARTICLE INTERACTIONS ALONG CELL BORDERS ===
         
         // Go by cells, cell % NUM_BINS would be its "location" in the grid
         for(int cell = 0; cell < field.size(); cell += NUM_BINS){
@@ -193,120 +177,83 @@ int main( int argc, char **argv )
             for(int bin = cell + 1; bin < cell + NUM_BINS; bin++){
                 switch(bin % NUM_BINS){
                     case N:
-                        for(int i = 0; i < field[bin].size(); i++){
-                            if((cell - (divisions * NUM_BINS)) + SE >= 0){
-                                for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + SE].size(); j++){
-                                    apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + SE][j],&dmin,&davg,&navg);
-                                    //printf("1\n");
-                                }
-                            }
-                            if((cell - (divisions * NUM_BINS)) + S >= 0){
-                                for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + S].size(); j++){
-                                    apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + S][j],&dmin,&davg,&navg);
-                                    //printf("2\n");
-                                }
-                            }
-                            if((cell - (divisions * NUM_BINS)) + SW >= 0){
-                                for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + SW].size(); j++){
-                                    apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + SW][j],&dmin,&davg,&navg);
-                                    //printf("3\n");
-                                }
-                            }
-                        }
-                        break;
-                        
-                    case NE:
-                        for(int i = 0; i < field[bin].size(); i++){
-                            if((cell - (divisions * NUM_BINS)) + SE >= 0){
-                                for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + SE].size(); j++){
-                                    apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + SE][j],&dmin,&davg,&navg);
-                                    //printf("4\n");
-                                }
-                            }
-                            if((cell - (divisions * NUM_BINS)) + S >= 0){
-                                for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + S].size(); j++) {
-                                    apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + S][j],&dmin,&davg,&navg);
-                                    //printf("5\n");
-                            }}
-                            if((cell - (divisions * NUM_BINS)) + NUM_BINS + SW >= 0 && ((cell / NUM_BINS) % divisions != 2)){
-                                for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + NUM_BINS + SW].size(); j++) {
-                                    apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + NUM_BINS + SW][j],&dmin,&davg,&navg);
-                                    //printf("6\n");
-                            }}
-                            if((cell / NUM_BINS) % divisions != (divisions - 1)){
-                                for(int j = 0; j < field[cell + NUM_BINS + NW].size(); j++) {
-                                    apply_force( field[bin][i], field[cell + NUM_BINS + NW][j],&dmin,&davg,&navg);
-                                    //printf("7\n");
-                            }}
-                            if((cell / NUM_BINS) % divisions != (divisions - 1)){
-                                for(int j = 0; j < field[cell + NUM_BINS + W].size(); j++){
-                                    apply_force( field[bin][i], field[cell + NUM_BINS + W][j],&dmin,&davg,&navg);
-                                    //printf("8\n");
-                                }
-                            }
-                        }
-                        break;
-                        
-                    case E:
-                        for(int i = 0; i < field[bin].size(); i++){
-                            if((cell / NUM_BINS) % divisions != (divisions - 1)){
-                                for(int j = 0; j < field[cell + NUM_BINS + NW].size(); j++) {
-                                    apply_force( field[bin][i], field[cell + NUM_BINS + NW][j],&dmin,&davg,&navg);
-                                    //printf("9\n");
-                            }}
-                            if((cell / NUM_BINS) % divisions != (divisions - 1)){
-                                for(int j = 0; j < field[cell + NUM_BINS + W].size(); j++) {
-                                    apply_force( field[bin][i], field[cell + NUM_BINS + W][j],&dmin,&davg,&navg);
-                                    //printf("10\n");
-                            }}
-                            if((cell / NUM_BINS) % divisions != (divisions - 1)){
-                                for(int j = 0; j < field[cell + NUM_BINS + SW].size(); j++) {
-                                    apply_force( field[bin][i], field[cell + NUM_BINS + SW][j],&dmin,&davg,&navg);
-                                    //printf("11\n");
-                            }}
-                        }
-                        break;
-                        
-                        
-                    case SE:
-                        for(int i = 0; i < field[bin].size(); i++){
-                            
-                            if((cell / NUM_BINS) % divisions != (divisions - 1)){
-                                for(int j = 0; j < field[cell + NUM_BINS + W].size(); j++) {
-                                    apply_force( field[bin][i], field[cell + NUM_BINS + W][j],&dmin,&davg,&navg);
-                                //printf("12\n");
-                            }}
-                            if((cell / NUM_BINS) % divisions != (divisions - 1)){
-                                for(int j = 0; j < field[cell + NUM_BINS + SW].size(); j++) {
-                                    apply_force( field[bin][i], field[cell + NUM_BINS + SW][j],&dmin,&davg,&navg);
-                                //printf("13\n");
-                            }}
-                            
-                            if((cell / NUM_BINS) % divisions != (divisions - 1) && (cell + (divisions * NUM_BINS)) + NUM_BINS < field.size()){
-                                for(int j = 0; j < field[(cell + (divisions * NUM_BINS)) + NUM_BINS + NW].size(); j++) {
-                                    apply_force( field[bin][i], field[(cell + (divisions * NUM_BINS)) + NUM_BINS + NW][j],&dmin,&davg,&navg);
-                                //printf("14\n");
-                        }}
-                            
-                            if(cell + (divisions * NUM_BINS) < field.size()){
-                                for(int j = 0; j < field[(cell + (divisions * NUM_BINS)) + N].size(); j++) {
-                                    apply_force( field[bin][i], field[(cell + (divisions * NUM_BINS)) + N][j],&dmin,&davg,&navg);
-                                //printf("15\n");
-                            }}
-                            if(cell + (divisions * NUM_BINS) < field.size()){
-                                for(int j = 0; j < field[(cell + (divisions * NUM_BINS)) + NE].size(); j++) {
-                                    apply_force( field[bin][i], field[(cell + (divisions * NUM_BINS)) + NE][j],&dmin,&davg,&navg);
-                                //printf("16\n");
-                            }}
-                        }
-                    break;
-                    
-                    case S:
                     for(int i = 0; i < field[bin].size(); i++){
-                        if(cell + (divisions * NUM_BINS) < field.size()){
-                            for(int j = 0; j < field[(cell + (divisions * NUM_BINS)) + NW].size(); j++) 
-                                apply_force( field[bin][i], field[(cell + (divisions * NUM_BINS)) + NW][j],&dmin,&davg,&navg);
+                        if((cell - (divisions * NUM_BINS)) + SE >= 0){
+                            for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + SE].size(); j++){
+                                apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + SE][j],&dmin,&davg,&navg);
+                            }
                         }
+                        if((cell - (divisions * NUM_BINS)) + S >= 0){
+                            for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + S].size(); j++){
+                                apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + S][j],&dmin,&davg,&navg);
+                            }
+                        }
+                        if((cell - (divisions * NUM_BINS)) + SW >= 0){
+                            for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + SW].size(); j++){
+                                apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + SW][j],&dmin,&davg,&navg);
+                            }
+                        }
+                    }
+                    break;
+                    case NE:
+                    for(int i = 0; i < field[bin].size(); i++){
+                        if((cell - (divisions * NUM_BINS)) + SE >= 0){
+                            for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + SE].size(); j++){
+                                apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + SE][j],&dmin,&davg,&navg);
+                            }
+                        }
+                        if((cell - (divisions * NUM_BINS)) + S >= 0){
+                            for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + S].size(); j++) 
+                                apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + S][j],&dmin,&davg,&navg);
+                        }
+                        if((cell - (divisions * NUM_BINS)) + NUM_BINS + SW >= 0 && ((cell / NUM_BINS) % divisions != 2)){
+                            for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + NUM_BINS + SW].size(); j++) 
+                                apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + NUM_BINS + SW][j],&dmin,&davg,&navg);
+                        }
+                        if((cell / NUM_BINS) % divisions != (divisions - 1)){
+                            for(int j = 0; j < field[cell + NUM_BINS + NW].size(); j++) 
+                                apply_force( field[bin][i], field[cell + NUM_BINS + NW][j],&dmin,&davg,&navg);
+                        }
+                        if((cell / NUM_BINS) % divisions != (divisions - 1)){
+                            for(int j = 0; j < field[cell + NUM_BINS + W].size(); j++){
+                                apply_force( field[bin][i], field[cell + NUM_BINS + W][j],&dmin,&davg,&navg);
+                            }
+                        }
+                    }
+                    break;
+                    case E:
+                    for(int i = 0; i < field[bin].size(); i++){
+                        if((cell / NUM_BINS) % divisions != (divisions - 1)){
+                            for(int j = 0; j < field[cell + NUM_BINS + NW].size(); j++) 
+                                apply_force( field[bin][i], field[cell + NUM_BINS + NW][j],&dmin,&davg,&navg);
+                        }
+                        if((cell / NUM_BINS) % divisions != (divisions - 1)){
+                            for(int j = 0; j < field[cell + NUM_BINS + W].size(); j++) 
+                                apply_force( field[bin][i], field[cell + NUM_BINS + W][j],&dmin,&davg,&navg);
+                        }
+                        if((cell / NUM_BINS) % divisions != (divisions - 1)){
+                            for(int j = 0; j < field[cell + NUM_BINS + SW].size(); j++) 
+                                apply_force( field[bin][i], field[cell + NUM_BINS + SW][j],&dmin,&davg,&navg);
+                        }
+                    }
+                    break;
+                    case SE:
+                    for(int i = 0; i < field[bin].size(); i++){
+                        
+                        if((cell / NUM_BINS) % divisions != (divisions - 1)){
+                            for(int j = 0; j < field[cell + NUM_BINS + W].size(); j++) 
+                                apply_force( field[bin][i], field[cell + NUM_BINS + W][j],&dmin,&davg,&navg);
+                        }
+                        if((cell / NUM_BINS) % divisions != (divisions - 1)){
+                            for(int j = 0; j < field[cell + NUM_BINS + SW].size(); j++) 
+                                apply_force( field[bin][i], field[cell + NUM_BINS + SW][j],&dmin,&davg,&navg);
+                        }
+                        
+                        if((cell / NUM_BINS) % divisions != (divisions - 1) && (cell + (divisions * NUM_BINS)) + NUM_BINS < field.size()){
+                            for(int j = 0; j < field[(cell + (divisions * NUM_BINS)) + NUM_BINS + NW].size(); j++) 
+                                apply_force( field[bin][i], field[(cell + (divisions * NUM_BINS)) + NUM_BINS + NW][j],&dmin,&davg,&navg);
+                        }
+                        
                         if(cell + (divisions * NUM_BINS) < field.size()){
                             for(int j = 0; j < field[(cell + (divisions * NUM_BINS)) + N].size(); j++) 
                                 apply_force( field[bin][i], field[(cell + (divisions * NUM_BINS)) + N][j],&dmin,&davg,&navg);
@@ -317,10 +264,8 @@ int main( int argc, char **argv )
                         }
                     }
                     break;
-                    
                     case SW:
                     for(int i = 0; i < field[bin].size(); i++){
-                        
                         if((cell / NUM_BINS) % divisions != 0){
                             for(int j = 0; j < field[cell - NUM_BINS + E].size(); j++) 
                                 apply_force( field[bin][i], field[cell - NUM_BINS + E][j],&dmin,&davg,&navg);
@@ -340,92 +285,50 @@ int main( int argc, char **argv )
                         if(cell + (divisions * NUM_BINS) < field.size()){
                             for(int j = 0; j < field[(cell + (divisions * NUM_BINS)) + NW].size(); j++) 
                                 apply_force( field[bin][i], field[(cell + (divisions * NUM_BINS)) + NW][j],&dmin,&davg,&navg);
-                        }
-                        
-                    }
-                    break;
-                    case W:
-                    for(int i = 0; i < field[bin].size(); i++){
-                        
-                        if((cell / NUM_BINS) % divisions != 0){
-                            for(int j = 0; j < field[cell - NUM_BINS + NE].size(); j++) 
-                                apply_force( field[bin][i], field[cell - NUM_BINS + NE][j],&dmin,&davg,&navg);
-                        }
-                        
-                        if((cell / NUM_BINS) % divisions != 0){
-                            for(int j = 0; j < field[cell - NUM_BINS + E].size(); j++) 
-                                apply_force( field[bin][i], field[cell - NUM_BINS + E][j],&dmin,&davg,&navg);
-                        }
-                        if((cell / NUM_BINS) % divisions != 0){
-                            for(int j = 0; j < field[cell - NUM_BINS + SE].size(); j++) 
-                                apply_force( field[bin][i], field[cell - NUM_BINS + SE][j],&dmin,&davg,&navg);
-                        }
-                        
+                        }  
                     }
                     break;
                     case NW:
                     for(int i = 0; i < field[bin].size(); i++){
-                            if((cell - (divisions * NUM_BINS)) + SW >= 0){
-                                for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + SW].size(); j++){
-                                    apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + SW][j],&dmin,&davg,&navg);
-                                    //printf("Force applied in %d\n", cell);
-                                }
-                            }
-                            if((cell - (divisions * NUM_BINS)) + S >= 0){
-                                for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + S].size(); j++) {
-                                    apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + S][j],&dmin,&davg,&navg);
-                                    //printf("Force applied in %d\n", cell);
-                            }}
-                            
-                            if((cell - (divisions * NUM_BINS)) - NUM_BINS + SE >= 0 && (cell / NUM_BINS) % divisions != 0){
-                                for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) - NUM_BINS + SE].size(); j++) {
-                                    apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) - NUM_BINS + SE][j],&dmin,&davg,&navg);
-                                    //printf("Force applied in %d\n", cell);
-                            }}
-                            if((cell / NUM_BINS) % divisions != 0){
-                                for(int j = 0; j < field[cell - NUM_BINS + NE].size(); j++) {
-                                    apply_force( field[bin][i], field[cell - NUM_BINS + NE][j],&dmin,&davg,&navg);
-                                    //printf("Force applied in %d\n", cell);
-                            }}
-                            if((cell / NUM_BINS) % divisions != 0){
-                                for(int j = 0; j < field[cell - NUM_BINS + E].size(); j++){
-                                    apply_force( field[bin][i], field[cell - NUM_BINS + E][j],&dmin,&davg,&navg);
-                                    //printf("Force applied in %d\n", cell);
-                                }
+                        if((cell - (divisions * NUM_BINS)) + SW >= 0){
+                            for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + SW].size(); j++){
+                                apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + SW][j],&dmin,&davg,&navg);
                             }
                         }
+                        if((cell - (divisions * NUM_BINS)) + S >= 0){
+                            for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) + S].size(); j++) 
+                                apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) + S][j],&dmin,&davg,&navg);
+                        }
+                        
+                        if((cell - (divisions * NUM_BINS)) - NUM_BINS + SE >= 0 && (cell / NUM_BINS) % divisions != 0){
+                            for(int j = 0; j < field[(cell - (divisions * NUM_BINS)) - NUM_BINS + SE].size(); j++) 
+                                apply_force( field[bin][i], field[(cell - (divisions * NUM_BINS)) - NUM_BINS + SE][j],&dmin,&davg,&navg);
+                        }
+                        if((cell / NUM_BINS) % divisions != 0){
+                            for(int j = 0; j < field[cell - NUM_BINS + NE].size(); j++) 
+                                apply_force( field[bin][i], field[cell - NUM_BINS + NE][j],&dmin,&davg,&navg);
+                        }
+                        if((cell / NUM_BINS) % divisions != 0){
+                            for(int j = 0; j < field[cell - NUM_BINS + E].size(); j++){
+                                apply_force( field[bin][i], field[cell - NUM_BINS + E][j],&dmin,&davg,&navg);
+                            }
+                        }
+                    }
                     break;
                 }    
             }
         }
                
-            
-        
-        
-        
-        
-        // Starter Code
-    /*    
-          for( int i = 0; i < n; i++ )
-          {
-            particles[i].ax = particles[i].ay = 0;
-              for (int j = 0; j < n; j++ ){
-				  apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-                }
-          }
-    */   
-
         // Particle movement alt.
         int my_index;
         for(int i = 0; i < field.size(); i++){
             for(int j = 0; j < field[i].size(); j++){
-                //printf("AccelX: %lf  AccelY: %lf\n", field[i][j].ax, field[i][j].ay);
                 move(field[i][j]);
+                // Obtain field index of particle after movement
                 my_index = get_square(field[i][j], divisions, subsize);
+                // If it changed indecies, the particle has crossed a border
                 if(my_index != i){
                     // Particle has moved outside of its bin into another one, must be updated
-                    //printf("WHERE DID MY LOST LAMB GO?! i: %d myindex: %d\n", i, my_index);
-                    // Add particle to its new home
                     field[my_index].push_back(field[i][j]);
                     // Remove duplicate particle from old location
                     (field[i]).erase(field[i].begin() + j);
@@ -433,14 +336,6 @@ int main( int argc, char **argv )
             }
         }
  
- /*
-        // Move each particle
-         for( int i = 0; i < n; i++ ){
-             
-             move( particles[i] );
-         } 
-            		
-*/
         if( find_option( argc, argv, "-no" ) == -1 )
         {
             if (navg) {
