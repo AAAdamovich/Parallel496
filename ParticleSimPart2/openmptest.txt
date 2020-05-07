@@ -1,0 +1,1 @@
+https://github.com/mjt249/parallel/blob/master/auto-edison-mpi24     --60
